@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"crypto/md5"
 	"encoding/hex"
+	"flag"
+	"errors"
 )
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +36,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte(hex.EncodeToString(md5Result)))
 
+		return
 	}
 }
 
@@ -43,6 +46,17 @@ func download(w http.ResponseWriter, r *http.Request) {
 		fileName := r.Header.Get("Filename")
 		if fileName == "" {
 			w.WriteHeader(500)
+
+			/*for a:=0; a<10; a++ {
+				w.Write([]byte("hello"))
+				if f,ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+
+				time.Sleep(1000000000)
+				fmt.Println("write")
+
+			}*/
 			return
 		}
 		s,err := ioutil.ReadFile("data/"+fileName)
@@ -51,10 +65,47 @@ func download(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(s)
+
+		return
 	}
 }
 
+func register(addr *string) error {
+	url := "http://" + *addr + ":8081/register"
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	resText := string(body)
+
+	if resText != "Success" {
+		return errors.New(fmt.Sprintf("%s %s\n", url, resText))
+	}
+	fmt.Printf("%s %s\n", url, resText)
+
+	return nil
+}
+
 func main() {
+	remoteIP := flag.String("addr", "", "Name server address")
+	flag.Parse()
+	if *remoteIP == "" {
+		fmt.Println("Need address.")
+		return
+	}
+	err := register(remoteIP)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/download", download)
 	log.Fatal(http.ListenAndServe(":8080", nil))
