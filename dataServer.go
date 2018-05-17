@@ -9,10 +9,21 @@ import (
 	"encoding/hex"
 	"flag"
 	"errors"
+	"strings"
 )
+
+var hostIP string
 
 func upload(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	remoteAddr := strings.Split(r.RemoteAddr, ":")
+	remoteIP := remoteAddr[0]
+
+	if remoteIP != hostIP {
+		fmt.Printf("Illegal request from %s, should be %s", remoteIP, hostIP)
+	}
+
 	if r.Method == "POST" {
 		s, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -35,6 +46,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write([]byte(hex.EncodeToString(md5Result)))
+		fmt.Printf("%s is wrote.\n", fileName)
 
 		return
 	}
@@ -42,6 +54,14 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 func download(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	remoteAddr := strings.Split(r.RemoteAddr, ":")
+	remoteIP := remoteAddr[0]
+
+	if remoteIP != hostIP {
+		fmt.Printf("Illegal request from %s, should be %s", remoteIP, hostIP)
+	}
+
 	if r.Method == "GET" {
 		fileName := r.Header.Get("Filename")
 		if fileName == "" {
@@ -59,19 +79,20 @@ func download(w http.ResponseWriter, r *http.Request) {
 			}*/
 			return
 		}
-		s,err := ioutil.ReadFile("data/"+fileName)
+		s, err := ioutil.ReadFile("data/" + fileName)
 		if err != nil {
 			w.WriteHeader(500)
 			return
 		}
 		w.Write(s)
+		fmt.Printf("%s is read.\n", fileName)
 
 		return
 	}
 }
 
-func register(addr *string) error {
-	url := "http://" + *addr + ":8081/register"
+func register(addr string) error {
+	url := "http://" + addr + ":8081/register"
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
@@ -95,19 +116,20 @@ func register(addr *string) error {
 }
 
 func main() {
-	remoteIP := flag.String("addr", "", "Name server address")
+	temp := flag.String("addr", "", "Name server address")
 	flag.Parse()
-	if *remoteIP == "" {
+	hostIP = *temp
+	if hostIP == "" {
 		fmt.Println("Need address.")
 		return
 	}
-	err := register(remoteIP)
+	err := register(hostIP)
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println("Register failed, exiting")
 		return
 	}
 	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/download", download)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
