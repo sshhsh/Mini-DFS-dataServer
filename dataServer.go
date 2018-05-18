@@ -22,6 +22,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	if remoteIP != hostIP {
 		fmt.Printf("Illegal request from %s, should be %s", remoteIP, hostIP)
+		return
 	}
 
 	if r.Method == "POST" {
@@ -60,6 +61,7 @@ func download(w http.ResponseWriter, r *http.Request) {
 
 	if remoteIP != hostIP {
 		fmt.Printf("Illegal request from %s, should be %s", remoteIP, hostIP)
+		return
 	}
 
 	if r.Method == "GET" {
