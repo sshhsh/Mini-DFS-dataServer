@@ -117,6 +117,10 @@ func register(addr string) error {
 	return nil
 }
 
+func echo(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(200)
+}
+
 func main() {
 	temp := flag.String("addr", "", "Name server address")
 	flag.Parse()
@@ -133,5 +137,6 @@ func main() {
 	}
 	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/download", download)
+	http.HandleFunc("/echo", echo)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
